@@ -29,54 +29,68 @@ public class Main {
         CommandLineParser commandLineParser = new DefaultParser();
         Options options = generateAcceptedCommandLineOptions();
 
-        int numberOfThreadsToUse = Runtime.getRuntime().availableProcessors();
-        String url = null;
-        String cookies = null;
-        String emailRegex = null;
-        String linkRegex = null;
-        String telephoneNumberRegex = null;
-        int depth = -1;
+        CommandLineArguments commandLineArguments = new CommandLineArguments();
 
-        try {
+        try { //argument parsing could be refactored to method
             CommandLine line = commandLineParser.parse(options, args, false);
 
-            url = line.getOptionValue("url");
-            validateUrlProtocol(url);
-
-            if (line.hasOption("threads")) {
-                numberOfThreadsToUse = Integer.parseInt(line.getOptionValue("threads"));
-            }
+            commandLineArguments.setUrl(line.getOptionValue("url"));
 
             if (line.hasOption("cookies")) {
-                cookies = line.getOptionValue("cookies");
+                commandLineArguments.setCookies(line.getOptionValue("cookies"));
+            }
+
+            if (line.hasOption("threads")) {
+                commandLineArguments.setNumberOfThreads(Integer.parseInt(line.getOptionValue("threads")));
             }
 
             if (line.hasOption("depth")) {
-                depth = Integer.parseInt(line.getOptionValue("depth"));
-                validateDepth(depth);
+                commandLineArguments.setDepth(Integer.parseInt(line.getOptionValue("depth")));
+            } else {
+                commandLineArguments.setDepthUnlimited();
             }
 
-            if (line.hasOption("cookies")) {
-                cookies = line.getOptionValue("cookies");
+            if (!line.hasOption("recursive")) {
+                commandLineArguments.setDepth(1);
+            }
+
+            if (line.hasOption("link")) {
+                commandLineArguments.setLinkRegex(line.getOptionValue("link"));
+            }
+
+            if (line.hasOption("email")) {
+                commandLineArguments.setEmailRegex(line.getOptionValue("email"));
+            }
+
+            if (line.hasOption("telephone")) {
+                commandLineArguments.setTelephoneNumberRegex(line.getOptionValue("telephone"));
             }
 
             if (line.hasOption("depth") && !line.hasOption("recursive")) {
-                throw new ParseException("Depth argument can only be used in combination with --recursive");
+                throw new ParseException("Specifying a depth has no effect without specifying --recursive");
             }
 
-        } catch (ParseException e) {
+        } catch (ParseException | IllegalArgumentException e) {
             printUsageAndHelp(options);
             System.err.println("\nError: " + e.getMessage());
             System.exit(64);
         }
 
-        Connection connection = new Connection(cookies);
-        Parser parser = new Parser(linkRegex, emailRegex, telephoneNumberRegex);
-        ThreadPoolManager threadPoolManager = new ThreadPoolManager(numberOfThreadsToUse);
+        Connection connection = new Connection(commandLineArguments.getCookies());
+        Parser parser = new Parser(
+                commandLineArguments.getLinkRegex(),
+                commandLineArguments.getEmailRegex(),
+                commandLineArguments.getTelephoneNumberRegex());
+        ThreadPoolManager threadPoolManager = new ThreadPoolManager(commandLineArguments.getNumberOfThreads());
 
         setupSignalHandling(threadPoolManager);
 
-        Scanner startThread = new Scanner(threadPoolManager, parser, connection, new Link(null, url), depth);
+        Scanner startThread = new Scanner(
+                threadPoolManager,
+                parser,
+                connection,
+                new Link(null, commandLineArguments.getUrl()),
+                commandLineArguments.getDepth());
         threadPoolManager.submit(startThread);
 
 
@@ -95,34 +109,6 @@ public class Main {
             System.out.println("Number of links found: " + collectedLinks.size());
 
         }));
-    }
-
-
-    /**
-     * Validates that the url starts with a valid {@link #ALLOWED_PROTOCOLS}
-     *
-     * @param url url to validate
-     * @throws ParseException if url starts with not supported protocol
-     */
-    private static void validateUrlProtocol(String url) throws ParseException {
-        for (String protocol : ALLOWED_PROTOCOLS) {
-            if (url.startsWith(protocol)) return;
-        }
-
-        throw new ParseException("Only http and https protocol are supported");
-    }
-
-
-    /**
-     * Validate that the given depths is greater than or equal to 1.
-     *
-     * @param depth depth to be validated
-     * @throws ParseException Is thrown if the depth is < 1.
-     */
-    private static void validateDepth(int depth) throws ParseException {
-        if (depth >= 1) return;
-
-        throw new ParseException("Depth must be at least 1 or greater");
     }
 
 
@@ -147,6 +133,7 @@ public class Main {
                 .required(true)
                 .hasArg(true)
                 .desc("Specify the URL")
+                .valueSeparator('=')
                 .build());
 
         options.addOption(Option.builder()
