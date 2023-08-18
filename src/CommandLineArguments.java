@@ -9,6 +9,9 @@ public class CommandLineArguments {
     private int numberOfThreads = Runtime.getRuntime().availableProcessors() * 2;
     private int depth = 1;
 
+    private boolean output = false;
+    private String outputFile;
+
     private String linkRegex;
     private String emailRegex;
     private String telephoneNumberRegex;
@@ -79,6 +82,21 @@ public class CommandLineArguments {
         this.telephoneNumberRegex = telephoneNumberRegex;
     }
 
+    public boolean isOutput() {
+        return output;
+    }
+
+    public void setOutput(boolean output) {
+        this.output = output;
+    }
+
+    public String getOutputFile() {
+        return outputFile;
+    }
+
+    public void setOutputFile(String outputFile) {
+        this.outputFile = outputFile;
+    }
 
     /**
      * Validates that the url starts with a valid {@link Main#ALLOWED_PROTOCOLS}

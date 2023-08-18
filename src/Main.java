@@ -7,6 +7,9 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import sun.misc.Signal;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Set;
 
 public class Main {
@@ -35,6 +38,11 @@ public class Main {
             CommandLine line = commandLineParser.parse(options, args, false);
 
             commandLineArguments.setUrl(line.getOptionValue("url"));
+
+            if (line.hasOption("output")) {
+                commandLineArguments.setOutput(true);
+                commandLineArguments.setOutputFile(line.getOptionValue("output"));
+            }
 
             if (line.hasOption("cookies")) {
                 commandLineArguments.setCookies(line.getOptionValue("cookies"));
@@ -99,14 +107,29 @@ public class Main {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             long end = System.currentTimeMillis();
-            System.out.println("Duration: " + (end - start));
+            System.out.println("Duration: " + (end - start) + "\n");
 
-            System.out.println("Found links");
-            Set<String> collectedLinks = parser.collectLinks();
-            for (String collectedLink : collectedLinks) {
-                System.out.println(collectedLink);
+            try {
+                writeOutput(
+                        parser.collectLinks(),
+                        commandLineArguments.isOutput(),
+                        commandLineArguments.getOutputFile(),
+                        "Links");
+
+                writeOutput(
+                        parser.collectEmails(),
+                        commandLineArguments.isOutput(),
+                        commandLineArguments.getOutputFile(),
+                        "Emails");
+
+                writeOutput(
+                        parser.collectPhoneNumbers(),
+                        commandLineArguments.isOutput(),
+                        commandLineArguments.getOutputFile(),
+                        "Phone numbers");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-            System.out.println("Number of links found: " + collectedLinks.size());
 
         }));
     }
@@ -119,6 +142,14 @@ public class Main {
      */
     private static Options generateAcceptedCommandLineOptions() {
         Options options = new Options();
+
+        options.addOption(Option.builder("o")
+                .longOpt("output")
+                .required(false)
+                .hasArg(true)
+                .desc("Specify an output file")
+                .valueSeparator('=')
+                .build());
 
         options.addOption(Option.builder("t")
                 .longOpt("threads")
@@ -208,6 +239,42 @@ public class Main {
             System.out.println("Shutting down...");
             threadPoolManager.interrupt();
         });
+    }
+
+    private static void writeOutput(Set<String> output, boolean toFile, String fileName, String type) throws IOException {
+        if (toFile) {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(fileName, true ));
+            writer.write(type + ":\n\n");
+            for (String line : output) {
+                writer.write(line + "\n");
+            }
+            writer.write("\n Number of " + type.toLowerCase() + " found: " + output.size() + "\n");
+
+            writer.write("""
+
+                    ####################################################################################
+                    ####################################################################################
+                    """);
+            writer.close();
+            return;
+        }
+
+        StringBuilder collect = new StringBuilder();
+        collect.append(type).append(":\n\n");
+
+        for (String line : output) {
+            collect.append(line).append("\n");
+        }
+
+        collect.append("\nNumber of ").append(type.toLowerCase()).append(" found: ").append(output.size()).append("\n");
+        collect.append("""
+
+                ####################################################################################
+                ####################################################################################
+                """);
+
+        System.out.println(collect);
+
     }
 
 }
