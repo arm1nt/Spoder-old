@@ -10,22 +10,23 @@ import java.util.regex.Pattern;
 public class Parser {
 
     private static final String DEFAULT_LINK_REGEX = "https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)";
+    private static final String DEFAULT_HREF_LINK = "(^(?!www\\.|(?:http|ftp)s?://|[A-Za-z]:\\\\|//).*)|(https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*))";
     private static final String DEFAULT_EMAIL_REGEX = "^[mailto:]?[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$";
     private static final String DEFAULT_PHONE_NUMBER_REGEX = "^[\\+]?[(]?[0-9]{3}[)]?[-\\s\\.]?[0-9]{3}[-\\s\\.]?[0-9]{4,6}$";
 
-    private final Pattern  linkPattern;
+    private final Pattern linkPattern;
+    private final Pattern hrefLinkPattern;
     private final Pattern emailPattern;
     private final Pattern phoneNumberPattern;
 
-    //Idea: Instead of storing all found links in memory, we could use a database
-    private ConcurrentHashMap<String, String> baseMap = new ConcurrentHashMap<>();
-    private final Set<String> collectedLinks = baseMap.keySet("DEFAULT");
-    private final Set<String> collectedEmails = baseMap.keySet("DEFAULT");
-    private final Set<String> collectedPhoneNumbers = baseMap.keySet("DEFAULT");
+    private final Set<String> collectedLinks =  ConcurrentHashMap.newKeySet();
+    private final Set<String> collectedEmails = ConcurrentHashMap.newKeySet();
+    private final Set<String> collectedPhoneNumbers = ConcurrentHashMap.newKeySet();
 
 
     Parser(String linkRegex, String emailRegex, String phoneNumberRegex) {
         this.linkPattern = customOrDefaultPattern(linkRegex, DEFAULT_LINK_REGEX);
+        this.hrefLinkPattern = customOrDefaultPattern(linkRegex, DEFAULT_HREF_LINK);
         this.emailPattern = customOrDefaultPattern(emailRegex, DEFAULT_EMAIL_REGEX);
         this.phoneNumberPattern = customOrDefaultPattern(phoneNumberRegex, DEFAULT_PHONE_NUMBER_REGEX);
     }
@@ -71,7 +72,6 @@ public class Parser {
     }
 
 
-    //TODO: maybe go through attributes myself -> easier to search for other tags as well
     /**
      * Parses the content of a tag and searches for links in hrefs
      *
@@ -81,21 +81,61 @@ public class Parser {
     public Set<String> parseAttributes(String attributes) {
         Set<String> foundLinks = new HashSet<>();
 
-        int indexOfFirstAttribute = attributes.indexOf("href");
+        StringBuilder word = new StringBuilder();
 
-        if (indexOfFirstAttribute == -1) return foundLinks;
+        for (int i = 0; i < attributes.length(); i++) {
+            if (attributes.charAt(i) == ' ' || attributes.charAt(i) == '\n' || attributes.charAt(i) == '\t') {
+                word.delete(0, word.length());
+                continue;
+            } else if (attributes.charAt(i) == '=') {
+                boolean relevantKeyword = relevantKeyword(word.toString());
 
-        char quoteChar = attributes.charAt(indexOfFirstAttribute+5);
+                word.delete(0, word.length());
+                int valueCounter = i+1;
+                char delim = attributes.charAt(valueCounter);
+                valueCounter++;
+                boolean endFound = false;
 
-        attributes = attributes.substring(indexOfFirstAttribute+6);
+                while (valueCounter < attributes.length()) {
+                    if (attributes.charAt(valueCounter) == delim) {
+                        endFound = true;
+                        break;
+                    }
+                    word.append(attributes.charAt(valueCounter));
+                    valueCounter++;
+                }
 
-        String link = attributes.substring(0, attributes.indexOf(quoteChar));
+                if (!endFound) break;
 
-        if (!collectedLinks.contains(link)) {
-            foundLinks.add(link);
-            collectedLinks.add(link);
+                i = valueCounter+1;
+
+                if (relevantKeyword) {
+                    Matcher matcher = hrefLinkPattern.matcher(word.toString());
+                    if (matcher.find()) {
+                        String found = matcher.group();
+                        if (!collectedLinks.contains(found)) {
+                            foundLinks.add(found);
+                            collectedLinks.add(found);
+                        }
+
+                        word.delete(0, word.length());
+                        continue;
+                    }
+
+
+                    matcher = emailPattern.matcher(word.toString());
+                    if (matcher.find()) {
+                        this.collectedEmails.add(matcher.group());
+                    }
+                }
+
+                word.delete(0, word.length());
+                continue;
+            }
+
+            word.append(attributes.charAt(i));
+
         }
-
         return foundLinks;
     }
 
@@ -142,5 +182,21 @@ public class Parser {
         if (custom == null) return Pattern.compile(standard);
 
         return Pattern.compile(custom);
+    }
+
+    /**
+     * Check if the given keyword is a relevant attribute
+     *
+     * @param key key to be checked
+     * @return true if it is a relevant attribute, false otherwise
+     */
+    private boolean relevantKeyword(String key) {
+        String[] keywords = {"href"};
+
+        for (String keyword : keywords) {
+            if (keyword.equals(key)) return true;
+        }
+
+        return false;
     }
 }
