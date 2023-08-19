@@ -40,8 +40,6 @@ public class Connection {
         connection.setConnectTimeout(500);
         connection.connect();
 
-        //TODO: Parse response code
-
         return connection;
     }
 
@@ -67,8 +65,6 @@ public class Connection {
         connection.setInstanceFollowRedirects(true);
         connection.setConnectTimeout(500);
         connection.connect();
-
-        //TODO: Parse response code
 
         return connection;
     }

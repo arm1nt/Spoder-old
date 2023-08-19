@@ -36,12 +36,14 @@ public class Scanner implements Runnable {
             return;
         }
 
+        BufferedReader in = null;
+
         try {
 
             if (link.toString().startsWith("http://")) {
                 HttpURLConnection httpConnection = this.connection.establishHttpConnection(link.toString());
 
-                BufferedReader in = new BufferedReader(new InputStreamReader(httpConnection.getInputStream(), Charset.defaultCharset()));
+                in = new BufferedReader(new InputStreamReader(httpConnection.getInputStream(), Charset.defaultCharset()));
 
                 readInput(in);
 
@@ -50,7 +52,7 @@ public class Scanner implements Runnable {
             } else if (link.toString().startsWith("https://")) {
                 HttpsURLConnection httpsConnection = this.connection.establishHttpsConnection(link.toString());
 
-                BufferedReader in = new BufferedReader(new InputStreamReader(httpsConnection.getInputStream(), Charset.defaultCharset()));
+                in = new BufferedReader(new InputStreamReader(httpsConnection.getInputStream(), Charset.defaultCharset()));
 
                 readInput(in);
 
@@ -68,6 +70,14 @@ public class Scanner implements Runnable {
             System.out.println(e.getMessage());
             threadPoolManager.decrement();
             return;
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
         threadPoolManager.decrement();
