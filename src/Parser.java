@@ -19,7 +19,7 @@ public class Parser {
     private final Pattern emailPattern;
     private final Pattern phoneNumberPattern;
 
-    private final Set<String> collectedLinks =  ConcurrentHashMap.newKeySet();
+    private final Set<Link> collectedLinks =  ConcurrentHashMap.newKeySet();
     private final Set<String> collectedEmails = ConcurrentHashMap.newKeySet();
     private final Set<String> collectedPhoneNumbers = ConcurrentHashMap.newKeySet();
 
@@ -39,10 +39,10 @@ public class Parser {
      * @param line line to be parsed
      * @return Set of the new-found links
      */
-    public Set<String> parseLine(String line, Link parentLink) {
+    public Set<Link> parseLine(String line, Link parentLink) {
         String[] words = line.split(" ");
 
-        Set<String> resultSet = new HashSet<>();
+        Set<Link> resultSet = new HashSet<>();
 
         for (String word : words) {
 
@@ -50,16 +50,11 @@ public class Parser {
             if (matcher.find()) {
                 String found = matcher.group();
 
-                String linkToAdd;
-                if (urlStartsWithProtocol(found)) {
-                    linkToAdd = found;
-                } else {
-                    linkToAdd = (parentLink == null) ? found : parentLink.toString() + found;
-                }
+                Link temp_link = generateAbsoluteLink(parentLink, found);
 
-                if (!collectedLinks.contains(found)) {
-                    resultSet.add(found);
-                    collectedLinks.add(linkToAdd);
+                if (!collectedLinks.contains(temp_link)) {
+                    resultSet.add(temp_link);
+                    collectedLinks.add(temp_link);
                 }
                 continue;
             }
@@ -86,8 +81,8 @@ public class Parser {
      * @param attributes text inside a tag
      * @return List of found links
      */
-    public Set<String> parseAttributes(String attributes, Link parentLink) {
-        Set<String> foundLinks = new HashSet<>();
+    public Set<Link> parseAttributes(String attributes, Link parentLink) {
+        Set<Link> foundLinks = new HashSet<>();
 
         StringBuilder word = new StringBuilder();
 
@@ -124,17 +119,11 @@ public class Parser {
                     if (matcher.find()) {
                         String found = matcher.group();
 
-                        String linkToAdd;
-                        if (urlStartsWithProtocol(found)) {
-                            linkToAdd = found;
-                        } else {
-                            linkToAdd = (parentLink == null) ? found : parentLink.toString() + found;
-                        }
+                        Link temp_link = generateAbsoluteLink(parentLink, found);
 
-
-                        if (!collectedLinks.contains(found)) {
-                            foundLinks.add(found);
-                            collectedLinks.add(linkToAdd);
+                        if (!collectedLinks.contains(temp_link)) {
+                            foundLinks.add(temp_link);
+                            collectedLinks.add(temp_link);
                         }
 
                         word.delete(0, word.length());
@@ -165,7 +154,11 @@ public class Parser {
      * @return Set of links
      */
     public Set<String> collectLinks() {
-        return collectedLinks;
+        Set<String> temp = new HashSet<>();
+        for (Link link : collectedLinks) {
+            temp.add(link.toString());
+        }
+        return temp;
     }
 
 
@@ -217,6 +210,23 @@ public class Parser {
         }
 
         return false;
+    }
+
+    /**
+     * Creates a new absolute link
+     *
+     * @param parentLink the link on the page on which we found the link
+     * @param found the found link
+     * @return new Link Object that represent the absolute link
+     */
+    private Link generateAbsoluteLink(Link parentLink, String found) {
+        Link toAdd;
+        if (urlStartsWithProtocol(found)) {
+            toAdd = new Link(null, found);
+        } else {
+            toAdd = new Link(parentLink.toString(), found);
+        }
+        return toAdd;
     }
 
     /**

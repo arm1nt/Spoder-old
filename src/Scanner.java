@@ -16,7 +16,7 @@ public class Scanner implements Runnable {
 
     private final int depth;
     private final Link link;
-    private final Set<String> newFoundLinks = new HashSet<>();
+    private final Set<Link> newFoundLinks = new HashSet<>();
     private final Connection connection;
     private final Parser parser;
     private final ThreadPoolManager threadPoolManager;
@@ -60,14 +60,8 @@ public class Scanner implements Runnable {
                 throw new MalformedURLException("Invalid Protocol");
             }
 
-            for (String link_temp : this.newFoundLinks) {
-                Link linkToAdd;
-                if (urlStartsWithProtocol(link_temp)) {
-                    linkToAdd = new Link(null, link_temp);
-                } else {
-                    linkToAdd = new Link(this.link.toString(), link_temp);
-                }
-                threadPoolManager.submit(new Scanner(threadPoolManager, parser, this.connection, linkToAdd, depth-1));
+            for (Link link_temp : this.newFoundLinks) {
+                threadPoolManager.submit(new Scanner(threadPoolManager, parser, this.connection, link_temp, depth-1));
             }
 
         } catch (IOException e) {
