@@ -6,8 +6,6 @@ public class Link {
     private int depth;
     private boolean successfullyConnected;
 
-    //Idea: Could store all Links found on this page -> can print tree
-
     private final String parent;
     private final String url;
 

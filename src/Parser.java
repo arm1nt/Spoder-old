@@ -9,8 +9,8 @@ import java.util.regex.Pattern;
  */
 public class Parser {
 
-    private static final String DEFAULT_LINK_REGEX = "https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)";
-    private static final String DEFAULT_HREF_LINK = "(^(?!www\\.|(?:http|ftp)s?://|[A-Za-z]:\\\\|//).*)|(https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*))";
+    private static final String DEFAULT_LINK_REGEX = "https?:\\/\\/(www\\.)?[-a-zA-Z0-9äüöÄÜÖ@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()äüöÄÜÖ@:%_\\+.~#?&//=]*)";
+    private static final String DEFAULT_HREF_LINK = "(^(?!www\\.|(?:http|ftp)s?://|[A-Za-z]:\\\\|//).*)|(https?:\\/\\/(www\\.)?[-a-zA-Z0-9äüöAÜÖ@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()äüöÄÜÖ@:%_\\+.~#?&//=]*))";
     private static final String DEFAULT_EMAIL_REGEX = "^[mailto:]?[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$";
     private static final String DEFAULT_PHONE_NUMBER_REGEX = "^[\\+]?[(]?[0-9]{3}[)]?[-\\s\\.]?[0-9]{3}[-\\s\\.]?[0-9]{4,6}$";
 
@@ -76,13 +76,15 @@ public class Parser {
      * Parses the content of a tag and searches for links in hrefs
      *
      * @param attributes text inside a tag
-     * @return List of found
+     * @return List of found links
      */
     public Set<String> parseAttributes(String attributes) {
         Set<String> foundLinks = new HashSet<>();
 
         StringBuilder word = new StringBuilder();
 
+        //Go through the attributes' word by word and as soon as we find a key that we are interested in
+        //we parse its value (key='value' or key="value").
         for (int i = 0; i < attributes.length(); i++) {
             if (attributes.charAt(i) == ' ' || attributes.charAt(i) == '\n' || attributes.charAt(i) == '\t') {
                 word.delete(0, word.length());

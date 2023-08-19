@@ -241,6 +241,15 @@ public class Main {
         });
     }
 
+    /**
+     * Write found links, etc. to stdout or to file.
+     *
+     * @param output strings to be written
+     * @param toFile indicates whether we write to a file or not
+     * @param fileName name of the file
+     * @param type Describes what's inside the output set
+     * @throws IOException Is thrown if there is an error writing to the specified file
+     */
     private static void writeOutput(Set<String> output, boolean toFile, String fileName, String type) throws IOException {
         if (toFile) {
             BufferedWriter writer = new BufferedWriter(new FileWriter(fileName, true ));
