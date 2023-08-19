@@ -97,7 +97,7 @@ public class Scanner implements Runnable {
         while ((input = in.read()) != -1) {
             if (input == '<') {
                 if (content.length() > 0) {
-                    this.newFoundLinks.addAll(parser.parseLine(content.toString()));
+                    this.newFoundLinks.addAll(parser.parseLine(content.toString(), this.link));
                     content.delete(0, content.length());
                 }
                 inside = true;
@@ -105,7 +105,7 @@ public class Scanner implements Runnable {
             }
 
             if (input == '>') {
-                this.newFoundLinks.addAll(parser.parseAttributes(attributes.toString()));
+                this.newFoundLinks.addAll(parser.parseAttributes(attributes.toString(), this.link));
                 attributes.delete(0, attributes.length());
                 inside = false;
                 continue;

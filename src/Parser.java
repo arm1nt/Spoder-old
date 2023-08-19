@@ -39,7 +39,7 @@ public class Parser {
      * @param line line to be parsed
      * @return Set of the new-found links
      */
-    public Set<String> parseLine(String line) { //TODO: pass in parent link
+    public Set<String> parseLine(String line, Link parentLink) {
         String[] words = line.split(" ");
 
         Set<String> resultSet = new HashSet<>();
@@ -49,9 +49,17 @@ public class Parser {
             Matcher matcher = linkPattern.matcher(word);
             if (matcher.find()) {
                 String found = matcher.group();
+
+                String linkToAdd;
+                if (urlStartsWithProtocol(found)) {
+                    linkToAdd = found;
+                } else {
+                    linkToAdd = (parentLink == null) ? found : parentLink.toString() + found;
+                }
+
                 if (!collectedLinks.contains(found)) {
                     resultSet.add(found);
-                    collectedLinks.add(found);
+                    collectedLinks.add(linkToAdd);
                 }
                 continue;
             }
@@ -78,7 +86,7 @@ public class Parser {
      * @param attributes text inside a tag
      * @return List of found links
      */
-    public Set<String> parseAttributes(String attributes) {
+    public Set<String> parseAttributes(String attributes, Link parentLink) {
         Set<String> foundLinks = new HashSet<>();
 
         StringBuilder word = new StringBuilder();
@@ -115,9 +123,18 @@ public class Parser {
                     Matcher matcher = hrefLinkPattern.matcher(word.toString());
                     if (matcher.find()) {
                         String found = matcher.group();
+
+                        String linkToAdd;
+                        if (urlStartsWithProtocol(found)) {
+                            linkToAdd = found;
+                        } else {
+                            linkToAdd = (parentLink == null) ? found : parentLink.toString() + found;
+                        }
+
+
                         if (!collectedLinks.contains(found)) {
                             foundLinks.add(found);
-                            collectedLinks.add(found);
+                            collectedLinks.add(linkToAdd);
                         }
 
                         word.delete(0, word.length());
@@ -197,6 +214,20 @@ public class Parser {
 
         for (String keyword : keywords) {
             if (keyword.equals(key)) return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Checks whether a given url starts with a valid {@link Main#ALLOWED_PROTOCOLS}.
+     *
+     * @param url url to be checked.
+     * @return Returns true if the url starts with one of the {@link Main#ALLOWED_PROTOCOLS} and false otherwise.
+     */
+    private boolean urlStartsWithProtocol(String url) {
+        for (String protocol : Main.ALLOWED_PROTOCOLS) {
+            if (url.startsWith(protocol)) return true;
         }
 
         return false;
