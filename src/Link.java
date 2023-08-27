@@ -15,17 +15,15 @@ public class Link {
 
             String urlWithoutProtocol = removeProtocolFromUrl(parent);
 
-            if (!url.startsWith("/")) {
-                //if relative url does not start with '/' append relative url to the current path
-                //so append it after the last occurrence of '/' in the parent url
-                int index = urlWithoutProtocol.lastIndexOf("/");
-
-                if (index == -1) {
-                    buildParentUrl.append(urlWithoutProtocol).append("/");
+            if (url.startsWith("?")) {
+                //if parent ends with / remove the slash and append the query parameters
+                //else just append the query parameters right away
+                if (parent.endsWith("/")) {
+                    buildParentUrl.append(urlWithoutProtocol.substring(0, urlWithoutProtocol.length()-1));
                 } else {
-                    buildParentUrl.append(urlWithoutProtocol, 0, index+1);
+                    buildParentUrl.append(urlWithoutProtocol);
                 }
-            } else {
+            } else if (url.startsWith("/")) {
                 //if relative url starts with '/': append the relative url after the domain
                 int index = urlWithoutProtocol.indexOf("/");
 
@@ -34,8 +32,17 @@ public class Link {
                 } else {
                     buildParentUrl.append(urlWithoutProtocol, 0, index);
                 }
-            }
+            } else {
+                //if relative url does not start with '/' or '?' append relative url to the current path
+                //so append it after the last occurrence of '/' in the parent url
+                int index = urlWithoutProtocol.lastIndexOf("/");
 
+                if (index == -1) {
+                    buildParentUrl.append(urlWithoutProtocol).append("/");
+                } else {
+                    buildParentUrl.append(urlWithoutProtocol, 0, index+1);
+                }
+            }
 
             this.parent = buildParentUrl.toString();
             this.url = url;
