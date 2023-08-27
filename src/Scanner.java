@@ -15,7 +15,7 @@ import java.util.Set;
 public class Scanner implements Runnable {
 
     private final int depth;
-    private final Link link;
+    private Link link;
     private final Set<Link> newFoundLinks = new HashSet<>();
     private final Connection connection;
     private final Parser parser;
@@ -67,7 +67,7 @@ public class Scanner implements Runnable {
             }
 
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.out.println("ERROR: " + e.getMessage());
             threadPoolManager.decrement();
             return;
         } finally {
@@ -109,7 +109,12 @@ public class Scanner implements Runnable {
             }
 
             if (input == '>') {
-                this.newFoundLinks.addAll(parser.parseAttributes(attributes.toString(), this.link));
+                if (attributes.toString().split(" ")[0].contains("base")) {
+                    this.setBaseUrl(getHrefOfBaseTag(attributes.toString()));
+                } else {
+                    this.newFoundLinks.addAll(parser.parseAttributes(attributes.toString(), this.link));
+                }
+
                 attributes.delete(0, attributes.length());
                 inside = false;
                 continue;
@@ -138,6 +143,42 @@ public class Scanner implements Runnable {
                 content.append((char) input);
             }
         }
+    }
+
+
+    /**
+     * If we find a base tag in the head of the html element, we replace the current
+     * Link with a new link based on the href attribute of the base tag.
+     *
+     * @param baseUrl value of the href attribute of the base tag.
+     */
+    private void setBaseUrl(String baseUrl) {
+        if (baseUrl == null) return;
+
+        if (urlStartsWithProtocol(baseUrl)) {
+            this.link = new Link(null, baseUrl);
+        } else {
+            this.link = new Link(link.toString(), baseUrl);
+        }
+    }
+
+
+    /**
+     * Returns the value of the href attribute.
+     *
+     * @param attributeTag base tags, whose href value should be extracted
+     * @return null if the tag does not have a href attribute, otherwise the value of the href attribute
+     */
+    private String getHrefOfBaseTag(String attributeTag) {
+        int index = attributeTag.indexOf("href");
+
+        if (index == -1) return null;
+
+        char valueDelim = attributeTag.charAt(index+5);
+        String valueAfterFirstDelim = attributeTag.substring(index+6);
+        int indexOfEndDelim = valueAfterFirstDelim.indexOf(valueDelim);
+
+        return valueAfterFirstDelim.substring(0, indexOfEndDelim);
     }
 
 

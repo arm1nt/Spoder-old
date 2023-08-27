@@ -98,11 +98,23 @@ public class Parser {
                 word.delete(0, word.length());
                 int valueCounter = i+1;
                 char delim = attributes.charAt(valueCounter);
+                boolean linkWithoutQuotes = false;
+                if (delim != '\"' && delim != '\'') {
+                    linkWithoutQuotes = true;
+                    word.append(attributes.charAt(valueCounter));
+                }
+
+                String otherDelims = new String(new char[]{' ', '>'});
                 valueCounter++;
                 boolean endFound = false;
 
                 while (valueCounter < attributes.length()) {
-                    if (attributes.charAt(valueCounter) == delim) {
+
+                    if (!linkWithoutQuotes && attributes.charAt(valueCounter) == delim) {
+                        endFound = true;
+                        break;
+                    }
+                    if (linkWithoutQuotes && otherDelims.contains(String.valueOf(attributes.charAt(valueCounter)))) {
                         endFound = true;
                         break;
                     }
@@ -110,7 +122,7 @@ public class Parser {
                     valueCounter++;
                 }
 
-                if (!endFound) break;
+                if (!endFound && !linkWithoutQuotes) break;
 
                 i = valueCounter+1;
 
